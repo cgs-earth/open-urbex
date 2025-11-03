@@ -1,6 +1,6 @@
-[![flake8 ⚙️](https://github.com/cgs-earth/urbex/actions/workflows/flake8.yml/badge.svg)](https://github.com/cgs-earth/urbex/actions/workflows/flake8.yml)
-[![black](https://github.com/cgs-earth/urbex/actions/workflows/black.yml/badge.svg)](https://github.com/cgs-earth/urbex/actions/workflows/black.yml)
-[![tests](https://github.com/cgs-earth/urbex/actions/workflows/test.yml/badge.svg)](https://github.com/cgs-earth/urbex/actions/workflows/test.yml)
+[![flake8 ⚙️](https://github.com/cgs-earth/urbex/actions/workflows/flake8.yml/badge.svg)](https://github.com/cgs-earth/open-urbex/actions/workflows/flake8.yml)
+[![black](https://github.com/cgs-earth/urbex/actions/workflows/black.yml/badge.svg)](https://github.com/cgs-earth/open-urbex/actions/workflows/black.yml)
+[![tests](https://github.com/cgs-earth/urbex/actions/workflows/test.yml/badge.svg)](https://github.com/cgs-earth/open-urbex/actions/workflows/test.yml)
 
 # urbex
 (or - the repository formally known as "The Atlas of Urban Expansion")
@@ -50,8 +50,6 @@ The only difference that has been found so far is that Mac users need to install
 - urbex is using the Black formatter to enforce code standards. It is mostly compatible with flake8 (PEP8 linter) and other linters but please refer to their website for tricks to fully get there if you have linter installed as well as Black.
 - Even if you do not have Black installed in your IDE, every push to the repository triggers Black to run in a GitHub Action and therefore all work will be automatically formatted.
 - The repository goal for unit testing is 80% coverage. All new functions must have a test written when submitting a PR.
-- This repository is private - please do not share it without express permission from the repository admin (matkinson@lincolninst.edu).
-- While currently private, the intention is to create public releases and have this repository become public. To that note - DO NOT STORE ANY SECRET INFORMATION IN FILES IN THIS REPOSITORY. It will be searchable forever no matter how many times you try to delete it from the interwebs. Secret information includes API keys, passwords, SSNs, birthdays, etc.Leave your identifying information at home please!
 - Using this repository does require an internet connection to download the data required. If you have run it previously and have all the data in the right places, you won't need the internet.
 ##### Data Inputs
 - Building footprints – Overture Maps Foundation
@@ -63,5 +61,3 @@ The only difference that has been found so far is that Mac users need to install
 
 ## Contribution Guidelines
 Welcome! Please see CONTRIBUTING.md!
-
-### Finally - the urbex repository is the IP of the Lincoln Institute of Land Policy. Any contributions will be considered the sole IP of LILP.

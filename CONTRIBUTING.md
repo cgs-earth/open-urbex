@@ -1,4 +1,4 @@
-# This document is for future purposes - we are currently not accepting contributions, sorry!
+# This is a new repo under heavy development - we welcome contributions but please understand that the lead developer is new and will be slow to respond but will get back to everyone!
 
 # Introduction
 Thank you for considering contributing to urbex! No one brain can do it all - and many monkeys at typewriters theoretically can write Shakespeare.
