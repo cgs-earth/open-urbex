@@ -1,0 +1,57 @@
+[project]
+name = "urbex"
+version = "0.0.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "arcgis>=2.4.0",
+    "dask-geopandas>=0.4.3",
+    "duckdb>=1.2.0",
+    "gdal>=3.10.2",
+    "geocube>=0.7.1",
+    "geopandas>=1.0.1",
+    "iprogress>=0.4",
+    "ipykernel>=6.29.5",
+    "ipywidgets>=8.1.6",
+    "jupyter>=1.1.1",
+    "leafmap>=0.54.0",
+    "localtileserver>=0.10.6",
+    "mercantile>=1.2.1",
+    "momepy>=0.10.0",
+    "osmnx>=2.0.1",
+    "pip>=25.0.1",
+    "proj>=0.2.0",
+    "pyproj>=3.7.1",
+    "pytest>=8.4.1",
+    "pytest-cov>=6.2.1",
+    "rasterio>=1.4.3",
+    "rasterstats>=0.20.0",
+    "requests>=2.31.0",
+    "rioxarray>=0.19.0",
+    "scikit-learn>=1.6.1",
+    "scipy>=1.15.2",
+    "shapely>=2.0.7",
+    "tqdm>=4.67.1",
+    "whitebox>=2.3.6",
+    "xarray-spatial>=0.4.0",
+]
+
+[tool.uv]
+python-preference = "only-managed"
+
+[tool.uv.sources]
+gdal = [
+  { index = "gdal-wheels", marker = "sys_platform == 'linux'" },
+  { index = "geospatial-wheels", marker = "sys_platform == 'win32'" },
+]
+
+[[tool.uv.index]]
+name = "geospatial-wheels"
+url = "https://nathanjmcdougall.github.io/geospatial-wheels-index/"
+explicit = true
+
+[[tool.uv.index]]
+name = "gdal-wheels"
+url = "https://gitlab.com/api/v4/projects/61637378/packages/pypi/simple"
+explicit = true
