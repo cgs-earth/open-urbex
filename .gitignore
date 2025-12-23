@@ -176,3 +176,4 @@ cython_debug/
 /IO/Scripts/Tests/Test_Data/Out
 /IO/cache
 /cache
+/maxent_resources

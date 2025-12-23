@@ -1,4 +1,5 @@
 from IO.Scripts.Modules.utilities import delete_file_if, create_dd_con
+import numpy as np
 from pathlib import Path
 import pandas as pd
 import geopandas as gpd
@@ -7,9 +8,15 @@ import shapely
 from arcgis.gis import GIS
 from arcgis.features import FeatureLayer
 from arcgis.geometry.filters import overlaps
+import duckdb
 
 
-def ox_trans_load(extentpoly, transPath, city_name, delfile=False):  # TODO: Write Test!
+def ox_trans_load(
+    extentpoly: shapely.geometry.polygon.Polygon,
+    transPath: str | Path,
+    city_name: str,
+    delfile: bool = False,
+) -> None:  # TODO: Write Test!
     """
     Download transportation data from OpenStreetMap (OSM) with osmnx.
     Select only point data and export.
@@ -27,7 +34,7 @@ def ox_trans_load(extentpoly, transPath, city_name, delfile=False):  # TODO: Wri
     -------
     None
     """
-    outPath = transPath / f"{city_name}_trans.shp"
+    outPath = Path(transPath) / f"{city_name}_trans.shp"
     delete_file_if(outPath, delfile=delfile)
     if not Path(outPath).exists():
         gdf = ox.features.features_from_polygon(
@@ -37,7 +44,7 @@ def ox_trans_load(extentpoly, transPath, city_name, delfile=False):  # TODO: Wri
                 "railway": ["stop", "halt", "station", "tram_stop"],
                 "aerialway": "station",
                 "highway": "bus_stop",
-                "amentiy": ["taxi", "ferry_terminal", "bus_station"],
+                "amenity": ["taxi", "ferry_terminal", "bus_station"],
             },
         )
         pointsgdf = gdf[gdf.geometry.geom_type == "Point"].copy()
@@ -49,8 +56,17 @@ def ox_trans_load(extentpoly, transPath, city_name, delfile=False):  # TODO: Wri
 
 
 def ovrtr_dwnld(
-    dpath, cols, fpath, xmin, xmax, ymin, ymax, delfile=False, quer=None, con=None
-):  # TODO: Write Test!
+    dpath: str | Path,
+    cols: str,
+    fpath: str | Path,
+    xmin: np.float64,
+    xmax: np.float64,
+    ymin: np.float64,
+    ymax: np.float64,
+    delfile: bool = False,
+    quer: str | None = None,
+    con: duckdb.DuckDBPyConnection | None = None,
+) -> str | None:  # TODO: Write Test!
     """
     Read and export data from parquet to shapefile,
     filtered to bounding box. Parquet can be stored in cloud,
@@ -101,17 +117,24 @@ def ovrtr_dwnld(
 
 
 def ovrtr_memry(
-    cols, dpath, quer, xmin, xmax, ymin, ymax, con=None
-):  # TODO: Write Test!
+    cols: str,
+    dpath: str | Path,
+    quer: str,
+    xmin: np.float64,
+    xmax: np.float64,
+    ymin: np.float64,
+    ymax: np.float64,
+    con: duckdb.DuckDBPyConnection | None = None,
+) -> gpd.GeoDataFrame:  # TODO: Write Test!
     """
     Read a parquet file into memory, filtered by bounding box.
 
     Parameters
     ----------
+    cols : str, in format: "x, y, z" representing columns to keep
     dpath : str, Parquet Data Path (location)
         Parquet can be stored in cloud, like Overture:
         "azure://release/2024-09-18.0/theme=X/type=X/*"
-    cols : str, in format: "x, y, z" representing columns to keep
     quer : str, like "ST_GeometryType(geometry)='LINESTRING'"
         SQL, DuckDB flavor - WHERE clause
     xmin : numpy.float64, minimum x value of bounding box
@@ -140,7 +163,9 @@ def ovrtr_memry(
     return gdf
 
 
-def df_2_gdf(df, espg="EPSG:4326"):  # TODO: Write Test!
+def df_2_gdf(
+    df: pd.DataFrame, espg: str = "EPSG:4326"
+) -> gpd.GeoDataFrame:  # TODO: Write Test!
     """
     Transform Pandas Dataframe with WKT column (named wkt)
     to a Geopandas GeoDataframe.
@@ -164,13 +189,15 @@ def df_2_gdf(df, espg="EPSG:4326"):  # TODO: Write Test!
     return gdf
 
 
-def fl_2_gdf(fl, cols, espg="EPSG:4326"):  # TODO: Write Test!
+def fl_2_gdf(
+    fl: FeatureLayer, cols: list[str], espg: str = "EPSG:4326"
+) -> gpd.GeoDataFrame:  # TODO: Write Test!
     """
     ArcGIS (Esri) Feature Layer to Geopandas Geodataframe.
 
     Parameters
     ----------
-    fl : arcgis.features.Feature object (Feature Layer)
+    fl : arcgis.features.FeatureLayer object (Feature Layer)
     cols : list of str, columns to keep in output
     espg : str, default="EPSG:4326", represents CRS
 
@@ -178,27 +205,27 @@ def fl_2_gdf(fl, cols, espg="EPSG:4326"):  # TODO: Write Test!
     -------
     gdf : Geopandas Geodataframe with 'geometry' column
     """
-    if len(fl) > 0:
-        shapes = gpd.GeoSeries.from_wkt(fl.SHAPE.geom.WKT)
+    if len(fl) > 0:  # type: ignore
+        shapes = gpd.GeoSeries.from_wkt(fl.SHAPE.geom.WKT)  # type: ignore
     else:
         shapes = []
-    gdf = gpd.GeoDataFrame(fl[cols], geometry=shapes, crs=espg)
+    gdf = gpd.GeoDataFrame(fl[cols], geometry=shapes, crs=espg)  # type: ignore
     return gdf
 
 
 def filt_load_bldgs(
-    dloc,
-    samp_out,
-    pt_out,
-    big_out,
-    cols,
-    xmin,
-    xmax,
-    ymin,
-    ymax,
-    con=None,
-    delfile=False,
-):  # TODO: Write Test!
+    dloc: str | Path,
+    samp_out: str | Path | None,
+    pt_out: str | Path | None,
+    big_out: str | Path | None,
+    cols: str,
+    xmin: np.float64,
+    xmax: np.float64,
+    ymin: np.float64,
+    ymax: np.float64,
+    con: duckdb.DuckDBPyConnection | None = None,
+    delfile: bool = False,
+) -> str | None:  # TODO: Write Test!
     """
     Create a table in memory from parquet, filtered by bounding box.
     Depending on output desired, will execute queries to filter,
@@ -303,7 +330,9 @@ def filt_load_bldgs(
         print("Either no selected files or not able to delete selected files.")
 
 
-def con_rds_filt(roadfp, crs=4326):  # TODO: Write Test!
+def con_rds_filt(
+    roadfp: str | Path, crs: int = 4326
+) -> gpd.GeoDataFrame:  # TODO: Write Test!
     """
     Filter roads to just connected roads (remove roads that
     do not connect to other roads).
@@ -350,18 +379,18 @@ def con_rds_filt(roadfp, crs=4326):  # TODO: Write Test!
 
 
 def water_dwnld_clean(
-    city_name,
-    out_folder,
-    xmin,
-    xmax,
-    ymin,
-    ymax,
-    wkid,
-    oloc,
-    relnum,
-    con=None,
-    delfile=True,
-):  # TODO: Write Test!
+    city_name: str,
+    out_folder: str | Path,
+    xmin: np.float64,
+    xmax: np.float64,
+    ymin: np.float64,
+    ymax: np.float64,
+    wkid: str,
+    oloc: str,
+    relnum: str,
+    con: duckdb.DuckDBPyConnection | None = None,
+    delfile: bool = True,
+) -> str | None:  # TODO: Write Test!
     """
     Runner function to download and combine multiple types of
     water data within a bounding box. Outputs all water as polygon
@@ -376,6 +405,8 @@ def water_dwnld_clean(
     ymin : numpy.float64, minimum y value of bounding box
     ymax : numpy.float64, maximum y value of bounding box
     wkid : str, represents UTM Zone (or projected CRS)
+    oloc : str, represents overture location (for data)
+    relnum : str, represents release number id
     con : DuckDB Connection Object
     delfile : True/False, default False
         Whether you want to delete a previous
@@ -406,7 +437,7 @@ def water_dwnld_clean(
         ewCols = ["objectid", "name1", "type", "iso_cc"]
         ewDPath = "https://maps.nccs.nasa.gov/mapping/rest/services/base_layers/esri_world_water_bodies/FeatureServer/0"  # noqa
         agol = GIS()  # noqa
-        query_extent = {
+        query_extent: dict[str, np.float64 | dict[str, int]] = {
             "xmin": xmin,
             "ymin": ymin,
             "xmax": xmax,
@@ -415,10 +446,10 @@ def water_dwnld_clean(
         }
         water = FeatureLayer(ewDPath).query(
             where="SHAPE__Area > 0.001",
-            geometry_filter=overlaps(query_extent, sr=4326),
+            geometry_filter=overlaps(query_extent, sr=4326),  # type: ignore
             as_df=True,
         )
-        water = fl_2_gdf(water, cols=ewCols, espg="EPSG:4326")
+        water = fl_2_gdf(water, cols=ewCols, espg="EPSG:4326")  # type: ignore
 
         # buffer rivers
         rivers = rivers.to_crs(wkid)
@@ -434,8 +465,17 @@ def water_dwnld_clean(
 
 
 def roads_dwnld_filt(
-    fdict, city_name, xmin, xmax, ymin, ymax, oloc, relnum, con=None, delfile=True
-):  # TODO: Write Test!
+    fdict: dict[str, Path],
+    city_name: str,
+    xmin: np.float64,
+    xmax: np.float64,
+    ymin: np.float64,
+    ymax: np.float64,
+    oloc: str,
+    relnum: str,
+    con: duckdb.DuckDBPyConnection | None = None,
+    delfile: bool = True,
+) -> str | None:  # TODO: Write Test!
     """
     Runner function for road data - download and filter road data.
 
@@ -447,6 +487,8 @@ def roads_dwnld_filt(
     xmax : numpy.float64, maximum x value of bounding box
     ymin : numpy.float64, minimum y value of bounding box
     ymax : numpy.float64, maximum y value of bounding box
+    oloc : str, represents overture location (for data)
+    relnum : str, represents release number id
     con : DuckDB Connection Object
     delfile : True/False, default False
         Whether you want to delete a previous
@@ -492,8 +534,17 @@ def roads_dwnld_filt(
 
 
 def places_dwnld(
-    fdict, city_name, xmin, xmax, ymin, ymax, oloc, relnum, con=None, delfile=False
-):  # TODO: Write Test!
+    fdict: dict[str, Path],
+    city_name: str,
+    xmin: np.float64,
+    xmax: np.float64,
+    ymin: np.float64,
+    ymax: np.float64,
+    oloc: str | Path,
+    relnum: str,
+    con: duckdb.DuckDBPyConnection | None = None,
+    delfile: bool = False,
+) -> str | None:  # TODO: Write Test!
     """
     Runner function for downloading place data from Overture.
 
@@ -505,6 +556,8 @@ def places_dwnld(
     xmax : numpy.float64, maximum x value of bounding box
     ymin : numpy.float64, minimum y value of bounding box
     ymax : numpy.float64, maximum y value of bounding box
+    oloc : str, represents overture location (for data)
+    relnum : str, represents release number id
     con : DuckDB Connection Object
     delfile : True/False, default False
         Whether you want to delete a previous
@@ -524,8 +577,13 @@ def places_dwnld(
 
 
 def points_2_csv(
-    fp, outfp, swd=False, species="Building", layers=[], delfile=False
-):  # TODO: Write Test!
+    fp: str | Path,
+    outfp: str | Path,
+    swd: bool = False,
+    species: str = "Building",
+    layers: list = [],
+    delfile: bool = False,
+) -> str | None:  # TODO: Write Test!
     """
     Convert Point data to XY table and export as CSV.
     Specifically formatted to match MaxEnt import requirements
@@ -576,10 +634,10 @@ def points_2_csv(
             cols = cols + layers
         bldgs[cols].to_csv(outfp, index=False)
     else:
-        print(f"{outfp} was not deleted nor recreated.")
+        return f"{outfp} was not deleted nor recreated."
 
 
-def vec_out(data, fp, delfile=True):
+def vec_out(data, fp: str | Path, delfile=True) -> str | None:
     """
     Write out vector files in either parquet or gpkg or shp formats.
 
@@ -593,7 +651,7 @@ def vec_out(data, fp, delfile=True):
 
     Returns
     -------
-    NA
+    str noting failure or None
     """
 
     delete_file_if(fp, delfile)
@@ -613,7 +671,7 @@ def vec_out(data, fp, delfile=True):
         please choose .parquet, .gpkg, or .shp"
 
 
-def vec_in(fp):
+def vec_in(fp: str | Path) -> gpd.GeoDataFrame:
     """
     Read vector data into geopandas geodataframe.
 
@@ -630,7 +688,7 @@ def vec_in(fp):
         if len(tp) > 0:
             tp = tp[-1]
         else:
-            return f"{str(fp)} has no path suffix."
+            raise ValueError(f"{str(fp)} has no path suffix.")
 
         if tp in [".gpkg", ".shp"]:
             gdf = gpd.read_file(fp)
@@ -639,13 +697,17 @@ def vec_in(fp):
             gdf = gpd.read_parquet(fp)
             return gdf
         else:
-            return f"File type of {tp} not available - \
+            raise ValueError(
+                f"File type of {tp} not available - \
             please choose .parquet, .gpkg, or .shp"
+            )
     else:
-        return f"File Path: {str(fp)} is not valid."
+        raise ValueError(f"File Path: {str(fp)} is not valid.")
 
 
-def big_roads_only(fp, fdict, city_name):
+def big_roads_only(
+    fp: str | Path, fdict: dict[str, Path], city_name: str
+) -> str | Path:
     """
     Filter OSM Roads to only four categories:
     1. Primary

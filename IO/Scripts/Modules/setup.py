@@ -9,9 +9,11 @@ import requests
 from zipfile import ZipFile
 from shapely.geometry import Polygon
 import shutil
+import numpy as np
+import duckdb
 
 
-def dwnld_import(ucid, outfp):
+def dwnld_import(ucid: int, outfp: str | Path) -> gpd.GeoDataFrame:
     """
     Download Global Human Settlement Layer data and filter to requested city.
 
@@ -48,7 +50,7 @@ def dwnld_import(ucid, outfp):
     return uc
 
 
-def local_import(ucid, uc_local):
+def local_import(ucid: int, uc_local: str | Path) -> gpd.GeoDataFrame:
     """
     Filter GHS to requested city if data already downloaded.
 
@@ -75,7 +77,39 @@ def local_import(ucid, uc_local):
     return uc
 
 
-def create_extents(shape):  # TODO: Write Test!
+def alt_poly(fp: Path | str, id: str, city: str, country: str) -> gpd.GeoDataFrame:
+    """
+    Use a geospatial file to create a fake FUA as basis for urbex analysis.
+
+    Parameters
+    ----------
+    fp : Path or str
+        input file path of vector data - one polygon, if more than one, dissolve
+    id : str
+        "fake id number"
+    city : str
+        Name of area
+    country : str
+        Name of country area is in
+
+    Returns
+    -------
+    gdf : gpd.GeoDataFrame
+    """
+    if ".parquet" in str(fp):
+        gdf = gpd.read_parquet(fp)
+    else:
+        gdf = gpd.read_file(fp)
+    gdf["IC_UC_G0"] = id.replace(" ", "_")
+    gdf["GC_UCN_MAI_2025"] = city.replace(" ", "_")
+    gdf["GC_CNT_GAD_2025"] = country.replace(" ", "_")
+
+    if len(gdf) > 1:
+        gdf = gdf.dissolve("IC_UC_G0").reset_index()
+    return gdf[["IC_UC_G0", "GC_UCN_MAI_2025", "GC_CNT_GAD_2025", "geometry"]]
+
+
+def create_extents(shape: gpd.GeoSeries) -> tuple:  # TODO: Write Test!
     """
     Make a Bounding Box for Shape (city extent).
 
@@ -111,7 +145,7 @@ def create_extents(shape):  # TODO: Write Test!
     return extentpoly, zoom, bounds, xmin, xmax, ymin, ymax
 
 
-def wgs84_to_utm(geo):
+def wgs84_to_utm(geo: gpd.GeoSeries) -> tuple[str, str]:
     """
     Calculate the UTM Zone for a geometry that is spatially referenced.
 
@@ -144,7 +178,7 @@ def wgs84_to_utm(geo):
     return UTMZone, wkid
 
 
-def folder_set_up(out_path, city_name, country_name):
+def folder_set_up(out_path: str | Path, city_name: str, country_name: str) -> tuple:
     """
     Create folders required for urbex to create data
     and run maxent.

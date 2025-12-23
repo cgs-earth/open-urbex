@@ -7,22 +7,24 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
+      with:
+        submodules: true
     - name: Install system dependencies
       run: sudo apt-get update && sudo apt-get install -y libkrb5-dev
     - name: Install uv
-      uses: astral-sh/setup-uv@v6
+      uses: astral-sh/setup-uv@v7.1.6
       with:
         # Install a specific version of uv.
         version: "0.8.12"
-    - uses: actions/setup-python@v5
+    - uses: actions/setup-python@v6
       name: Setup Python
       with:
           python-version-file: ".python-version"
     - name: Install the project
       run: uv sync --all-extras --dev  # --locked
     - name: Run tests
-      run: uv run pytest --rootdir=IO --cov=IO/Scripts IO/Scripts/Tests
+      run: uv run pytest --rootdir=Tests --cov=IO/Scripts Tests
 
     - name: failed tests 🚩
       if: ${{ failure() }}

@@ -5,10 +5,11 @@ from numpy import copy
 import geopandas as gpd
 import pandas as pd
 import rasterio
-from rasterio.transform import Affine
-from rasterio import features
+from rasterio import errors, features
+from rasterio.transform import Affine, xy
 from rasterio.warp import reproject, Resampling, calculate_default_transform
 from rasterio.crs import CRS
+from rasterio.shutil import delete as rdel
 from rasterio.stack import stack
 from shapely.geometry import shape
 from sklearn.neighbors import KernelDensity
@@ -19,9 +20,17 @@ import xarray as xr
 from xrspatial.focal import focal_stats
 from xrspatial.convolution import circle_kernel
 from xrspatial.zonal import stats, regions
+import osgeo_utils.gdal_merge
 
 
-def run_kde(pts, xmin, ymin, xmax, ymax, bw=0.005):
+def run_kde(
+    pts: gpd.GeoDataFrame,
+    xmin: np.float64,
+    ymin: np.float64,
+    xmax: np.float64,
+    ymax: np.float64,
+    bw: float = 0.005,
+):
     """
     Create Grid, Put Points into Grid, Estimate Kernel Density,
     Reshape Estimated Data to Grid.
@@ -64,7 +73,17 @@ def run_kde(pts, xmin, ymin, xmax, ymax, bw=0.005):
     return eval, xct, yct
 
 
-def export_kde_raster(kde_out, XX, YY, xmin, xmax, ymin, ymax, proj, filename):
+def export_kde_raster(
+    kde_out: np.ndarray,
+    XX: np.ndarray,
+    YY: np.ndarray,
+    xmin: np.float64,
+    ymin: np.float64,
+    xmax: np.float64,
+    ymax: np.float64,
+    proj: int,
+    filename: str | Path,
+) -> None:
     """
     Export and save a kernel density raster.
 
@@ -92,9 +111,9 @@ def export_kde_raster(kde_out, XX, YY, xmin, xmax, ymin, ymax, proj, filename):
     xres = (xmax - xmin) / len(XX)
     yres = (ymax - ymin) / len(YY)
     # Set transform
-    transform = Affine.translation(xmin - xres / 2, ymin - yres / 2) * Affine.scale(
-        xres, yres
-    )
+    transform = Affine.translation(
+        float(xmin - xres / 2), float(ymin - yres / 2)
+    ) * Affine.scale(xres, yres)
 
     # Export array as raster
     with rasterio.open(
@@ -116,14 +135,14 @@ def kde_to_city_center(
     kde_places,
     xct,
     yct,
-    city_name,
-    country_name,
-    xmin,
-    xmax,
-    ymin,
-    ymax,
-    cc_one=True,
-):
+    city_name: str,
+    country_name: str,
+    xmin: np.float64,
+    ymin: np.float64,
+    xmax: np.float64,
+    ymax: np.float64,
+    cc_one: bool = True,
+) -> gpd.GeoDataFrame:
     """
     Calculate City Center Point from KDE of POI data.
 
@@ -147,14 +166,14 @@ def kde_to_city_center(
     xres = (xmax - xmin) / len(xct)
     yres = (ymax - ymin) / len(yct)
     # Set transform
-    trnsfrm = Affine.translation(xmin - xres / 2, ymin - yres / 2) * Affine.scale(
-        xres, yres
-    )
+    trnsfrm = Affine.translation(
+        float(xmin - xres / 2), float(ymin - yres / 2)
+    ) * Affine.scale(xres, yres)
     # calculate point
     cc_indices = np.where(kde_places == kde_places.max())
     cc_coords = {"lat": [], "lon": []}
     for p in range(0, len(cc_indices[0])):
-        ltln = rasterio.transform.xy(trnsfrm, cc_indices[1][p], cc_indices[0][p])
+        ltln = xy(trnsfrm, cc_indices[1][p], cc_indices[0][p])
         cc_coords["lon"].append(ltln[0])
         cc_coords["lat"].append(ltln[1])
 
@@ -173,7 +192,9 @@ def kde_to_city_center(
     return cc_gdf
 
 
-def distance_accumulation(inrast, outrast):  # TODO: Write Test!
+def distance_accumulation(
+    inrast: str | Path, outrast: str | Path
+) -> None:  # TODO: Write Test!
     """
     Calculate distance from values for each cell.
 
@@ -200,7 +221,9 @@ def distance_accumulation(inrast, outrast):  # TODO: Write Test!
     raster_out(distacc, outrast, inrast)
 
 
-def vec_2_rast(vec, exrast, outrast):
+def vec_2_rast(
+    vec: str | Path | gpd.GeoDataFrame, exrast: str | Path, outrast: str | Path
+) -> np.ndarray:
     """
     Transform a vector dataset to a raster dataset.
 
@@ -243,7 +266,7 @@ def vec_2_rast(vec, exrast, outrast):
     return rasterized
 
 
-def tif_2_ascii(in_fp, out_fp):
+def tif_2_ascii(in_fp: str | Path, out_fp: str | Path) -> str:
     """
     Convert TIF raster file to ASCII file in format
     required for MaxEnt.
@@ -279,7 +302,12 @@ def tif_2_ascii(in_fp, out_fp):
         return "Output File Path Must End in .asc"
 
 
-def coreg_raster(infile, match, outfile, resample_method=Resampling.nearest):
+def coreg_raster(
+    infile: str | Path,
+    match: str | Path,
+    outfile: str | Path,
+    resample_method=Resampling.nearest,
+) -> None:
     """
     Reproject a file to match the shape and projection of existing raster.
 
@@ -302,18 +330,18 @@ def coreg_raster(infile, match, outfile, resample_method=Resampling.nearest):
     with rasterio.open(infile) as src:
 
         # open input to match
-        with rasterio.open(match) as match:
+        with rasterio.open(match) as matche:
 
             # calculate the output transform matrix
             dst_transform, dst_width, dst_height = calculate_default_transform(
                 src.crs,  # input CRS
-                match.crs,  # output CRS
-                match.width,  # input width
-                match.height,  # input height
-                *match.bounds,  # unpacks input outer boundaries
+                matche.crs,  # output CRS
+                matche.width,  # input width
+                matche.height,  # input height
+                *matche.bounds,  # unpacks input outer boundaries
                 # (left, bottom, right, top)
             )
-            dst_crs = match.crs
+            dst_crs = matche.crs
 
         # set properties for output
         dst_kwargs = src.meta.copy()
@@ -344,8 +372,16 @@ def coreg_raster(infile, match, outfile, resample_method=Resampling.nearest):
                 )
 
 
-def node_dist_grid(nodes, xmin, xmax, ymin, ymax):
+def node_dist_grid(
+    nodes: gpd.GeoDataFrame,
+    xmin: np.float64,
+    ymin: np.float64,
+    xmax: np.float64,
+    ymax: np.float64,
+) -> tuple:
     """
+    Interpolate node distance to city center over a grid.
+
     Parameters
     ----------
     nodes : GeoPandas GeoDataFrame
@@ -387,8 +423,16 @@ def node_dist_grid(nodes, xmin, xmax, ymin, ymax):
 
 
 def array_2_tif(
-    grid, grid_x, grid_y, fdict, city_name, xmin, xmax, ymin, ymax
-):  # TODO: Write Test!
+    grid: np.ndarray,
+    grid_x: np.ndarray,
+    grid_y: np.ndarray,
+    fdict: dict[str, Path],
+    city_name: str,
+    xmin: np.float64,
+    ymin: np.float64,
+    xmax: np.float64,
+    ymax: np.float64,
+) -> Path:  # TODO: Write Test!
     """
     Export Numpy Array (representing raster data) to a TIF.
 
@@ -421,9 +465,9 @@ def array_2_tif(
     yres = (ymax - ymin) / len(grid_y)
 
     # Set transform
-    transform = Affine.translation(xmin - xres / 2, ymin - yres / 2) * Affine.scale(
-        xres, yres
-    )
+    transform = Affine.translation(
+        float(xmin - xres / 2), float(ymin - yres / 2)
+    ) * Affine.scale(xres, yres)
 
     # replace no data with -9999 (nan --> -9999)
     grid_out = np.nan_to_num(grid_out, nan=-9999)
@@ -451,7 +495,9 @@ def array_2_tif(
     return out_fp
 
 
-def get_resolution_in_meters(rast, outfp, wkid, scrs="EPSG:4326"):
+def get_resolution_in_meters(
+    rast: str | Path, outfp: str | Path, wkid: str | int, scrs: str = "EPSG:4326"
+) -> int | float:
     """
     Calculate the area of a raster cel in meters.
     Note: Destination CRS (wkid) must be have units that are meters
@@ -479,11 +525,11 @@ def get_resolution_in_meters(rast, outfp, wkid, scrs="EPSG:4326"):
         if rcrs.linear_units in ["m", "meter", "metre"]:
             print("Units are Meters in Projected Coordinate System.")
         else:
-            raise rasterio.errors.CRSError(
+            raise errors.CRSError(
                 "Use a coordinate system that has meters as its unit."
             )
     else:
-        raise rasterio.errors.CRSError("Use a Projected Coordinate System.")
+        raise errors.CRSError("Use a Projected Coordinate System.")
     if CRS.from_user_input(scrs) == CRS.from_user_input(wkid):
         wkid_rast = rasterio.open(rast)  # open original
     else:
@@ -518,23 +564,23 @@ def get_resolution_in_meters(rast, outfp, wkid, scrs="EPSG:4326"):
 
 
 def basic_point_density(
-    points,
-    exrast,
-    outrast,
-    arm,
-    fld1=None,
-    k=circle_kernel(1, 1, 3),
-):  # TODO: Write test!
+    points_fp: str | Path | gpd.GeoDataFrame,
+    exrast_fp: str | Path,
+    outrast_fp: str | Path,
+    arm: int | float,
+    fld1: str | None = None,
+    k: np.ndarray = circle_kernel(1, 1, 3),
+) -> None:  # TODO: Write test!
     """
     Calculate the Point Density (by neighborhood) per cel.
 
     Parameters
     ----------
-    bldgs_fp : str / Path object
+    points_fp : str / Path object / gpd.GeoDataFrame
         File path for point dataset (shapefile etc.)
-    exrast : str / Path object
+    exrast_fp : str / Path object
         Sample raster file path (for export params)
-    outrast : str / Path object
+    outrast_fp : str / Path object
         Output raster file path
     arm : numeric
         area of cel in meters
@@ -548,13 +594,15 @@ def basic_point_density(
     -------
     N/A
     """
-    if isinstance(points, (str, Path)):
-        points = vec_in(points)
-    elif not isinstance(points, gpd.GeoDataFrame):
+    if isinstance(points_fp, (str, Path)):
+        points = vec_in(points_fp)
+    elif not isinstance(points_fp, gpd.GeoDataFrame):
         raise TypeError(
             "Points must be a file path pointing to a spatial file \
                 or a GeoPandas GeoDataFrame."
         )
+    else:
+        points = points_fp
 
     if fld1 not in points.columns:
         warning_handler(
@@ -566,12 +614,12 @@ def basic_point_density(
 
     pts = list(zip(points.geometry, points[fld1]))
     # sum of bldg area per cell
-    samprast = rasterio.open(exrast)
-    br = rasterio.features.rasterize(
+    samprast = rasterio.open(exrast_fp)
+    br = features.rasterize(
         shapes=pts,
         out_shape=samprast.shape,
         transform=samprast.transform,
-        merge_alg=rasterio.enums.MergeAlg.add,
+        merge_alg=rasterio.enums.MergeAlg.add,  # type: ignore
         fill=0,  # no data is 0 here, focal stats treats as data
     )
     samprast.close()
@@ -579,14 +627,16 @@ def basic_point_density(
     # focal stats - sum of cell value
     fs = focal_stats(xr.DataArray(br), k, stats_funcs=["sum"])
     # divide each cell by neighborhood size (in sqm)
-    fs.values = fs.values / (arm * sum(sum(k)))
+    fs.values = fs.values / (arm * sum(sum(k)))  # type: ignore
     # reset no data value
     fs.values[fs.values == 0] = -9999
 
-    raster_out(fs[0], outrast, exrast)
+    raster_out(fs[0], outrast_fp, exrast_fp)
 
 
-def rescale_raster(i_fp, o_fp, scale_factor):  # TODO: Write Test!
+def rescale_raster(
+    i_fp: str | Path, o_fp: str | Path, scale_factor: int | float
+) -> None:  # TODO: Write Test!
     """
     Rescale a raster by a factor and write out data to a new dataset.
     Uses bilinear sampling to resample and the factor to change
@@ -634,8 +684,18 @@ def rescale_raster(i_fp, o_fp, scale_factor):  # TODO: Write Test!
 
 
 def raster_out(
-    rast, ofp, exfp, rty=rasterio.float64, nd=-9999, drvr="GTiff"
-):  # TODO: Write Test!
+    rast: (
+        np.ndarray
+        | xr.DataArray
+        | rasterio.io.DatasetReader  # type: ignore
+        | rasterio.io.DatasetWriter  # type: ignore
+    ),
+    ofp: str | Path,
+    exfp: str | Path,
+    rty: str = rasterio.float64,
+    nd: int = -9999,
+    drvr: str = "GTiff",
+) -> None:  # TODO: Write Test!
     """
     Write raster dataset out to file based on an example raster's properties.
 
@@ -678,7 +738,10 @@ def raster_out(
     ex.close()
 
 
-def zonal_stats(zones_fp, values_fp, sf="max"):  # TODO: Write Test!
+def zonal_stats(zones_fp: str | Path, values_fp: str | Path, sf: str = "max") -> tuple[
+    np.ndarray,
+    pd.DataFrame | xr.DataArray,
+]:  # TODO: Write Test!
     """
     Calculate Zonal Statistics!
 
@@ -708,7 +771,7 @@ def zonal_stats(zones_fp, values_fp, sf="max"):  # TODO: Write Test!
     vv = xr.DataArray(vv)
 
     zs = stats(zones=zz, values=vv)
-    dzs = zs[["zone", sf]].set_index("zone").to_dict()
+    dzs = zs[["zone", sf]].set_index("zone").to_dict()  # type: ignore
 
     zs_zz = copy(zz)
     for z, m in dzs[sf].items():
@@ -716,10 +779,12 @@ def zonal_stats(zones_fp, values_fp, sf="max"):  # TODO: Write Test!
 
     zs_zz = np.nan_to_num(zs_zz, nan=-9999)
 
-    return zs_zz, zs
+    return zs_zz, zs  # type: ignore
 
 
-def rast_2_poly(rast_fp, col_name, nv=-9999):
+def rast_2_poly(
+    rast_fp: str | Path, col_name: str, nv: int = -9999
+) -> gpd.GeoDataFrame:
     """
     Raster dataset to polygons based on values.
 
@@ -729,6 +794,8 @@ def rast_2_poly(rast_fp, col_name, nv=-9999):
         File path pointing to raster to convert to polygons.
     col_name : str
         Name of the column that you want the values to be represented in.
+    nv : int (default = -9999)
+        represents null value/no data
 
     Returns
     -------
@@ -751,7 +818,13 @@ def rast_2_poly(rast_fp, col_name, nv=-9999):
     return gdf
 
 
-def region_group(data, out, exrast, n=8, nv=-9999):
+def region_group(
+    data: str | Path | np.ndarray,
+    out: str | Path,
+    exrast: str | Path,
+    n: int = 8,
+    nv: int = -9999,
+) -> np.ndarray:
     """
     Creates zones of touching cels of identical values -
     Intended to be an equivalent to Esri's Region Group tool.
@@ -789,7 +862,7 @@ def region_group(data, out, exrast, n=8, nv=-9999):
     return rgs
 
 
-def background_points(samp_rast, out_shp):
+def background_points(samp_rast: str | Path, out_shp: str | Path) -> gpd.GeoDataFrame:
     """
     Create background points from sample raster.
 
@@ -810,7 +883,7 @@ def background_points(samp_rast, out_shp):
         w = band.shape[1]
         # create meshgrid
         cols, rows = np.meshgrid(np.arange(w), np.arange(h))
-        xv, yv = rasterio.transform.xy(src.transform, rows, cols)
+        xv, yv = xy(src.transform, rows, cols)
     src.close()
 
     bps = gpd.GeoDataFrame(
@@ -831,7 +904,9 @@ def background_points(samp_rast, out_shp):
     return bps
 
 
-def samples_with_data(samples, lnames, rstack_fp, s_out_fp):
+def samples_with_data(
+    samples: str | Path, lnames: list[str], rstack_fp: str | Path, s_out_fp: str | Path
+) -> None:
     """
     Use background points, sample points (species),
     and rasters to create sample-with-data format.
@@ -866,7 +941,7 @@ def samples_with_data(samples, lnames, rstack_fp, s_out_fp):
     s.to_file(s_out_fp)
 
 
-def stack_rasters(rdict, out_fp):
+def stack_rasters(rdict: dict[str, str | Path], out_fp: str | Path) -> list[str]:
     """
     Combine one band raster files to create one output file with one band per raster.
     Rasters must have the same CRS, cel size, location, etc.

@@ -6,9 +6,10 @@ import mercantile
 from pathlib import Path
 from rasterio.transform import from_bounds
 from rasterio.merge import merge
+import numpy as np
 
 
-def download_terrain_tile(x, y, z, output_path):
+def download_terrain_tile(x: int, y: int, z: int, output_path: str | Path) -> bool:
     """
     Download a terrain tile from AWS Terrain Tiles.
 
@@ -29,7 +30,7 @@ def download_terrain_tile(x, y, z, output_path):
     return False
 
 
-def decode_terrain_png(png_path):
+def decode_terrain_png(png_path: str | Path) -> np.ndarray:
     """
     Decode terrain PNG file into elevation data.
 
@@ -49,7 +50,13 @@ def decode_terrain_png(png_path):
     return elevation
 
 
-def get_terrain_data(bounds, zoom, output_path, city_name, delfile=False):
+def get_terrain_data(
+    bounds: tuple[np.float64, ...],
+    zoom: int,
+    output_path: str | Path,
+    city_name: str,
+    delfile: bool = False,
+) -> str | None:
     """
     Download and merge terrain data for a given bounding box.
 
@@ -57,8 +64,10 @@ def get_terrain_data(bounds, zoom, output_path, city_name, delfile=False):
         bounds (tuple): (min_lon, min_lat, max_lon, max_lat)
         zoom (int): Zoom level
         output_path (str): Path to save the merged GeoTIFF
+        city_name : str,
+        delfile : bool - default to False
     """
-    elves = output_path / f"{city_name}_elevation.tif"
+    elves = Path(output_path) / f"{city_name}_elevation.tif"
     delete_file_if(elves, delfile=delfile)
     if not Path(elves).exists():
         # Create temporary directory for downloaded tiles
