@@ -9,7 +9,7 @@ import tempfile
 import geopandas as gpd  # noqa
 import numpy as np
 
-repo = Path("/home/runner/work/urbex/urbex")
+repo = Path("/home/runner/work/open-urbex/open-urbex")
 os.chdir(repo)
 
 from IO.Scripts.Modules.terrain import (  # noqa

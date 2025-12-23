@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 import rasterio
 
-repo = Path("/home/runner/work/urbex/urbex")
+repo = Path("/home/runner/work/open-urbex/open-urbex")
 os.chdir(repo)
 test_data_path = repo / "Tests" / "Test_Data" / "test_rasters"
 

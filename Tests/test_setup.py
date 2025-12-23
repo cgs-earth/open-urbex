@@ -13,7 +13,7 @@ from pyproj import CRS
 import pytest
 import pyogrio
 
-repo = Path("/home/runner/work/urbex/urbex")
+repo = Path("/home/runner/work/open-urbex/open-urbex")
 os.chdir(repo)
 
 from IO.Scripts.Modules.setup import (  # noqa

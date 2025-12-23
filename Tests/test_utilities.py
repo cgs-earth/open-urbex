@@ -4,7 +4,7 @@ import duckdb
 import pytest
 import pandas as pd
 
-repo = Path("/home/runner/work/urbex/urbex")
+repo = Path("/home/runner/work/open-urbex/open-urbex")
 os.chdir(repo)
 
 from IO.Scripts.Modules.utilities import (  # noqa

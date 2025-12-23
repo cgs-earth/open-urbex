@@ -13,7 +13,7 @@
 # )
 # from pathlib import Path
 
-# repo = Path("/home/runner/work/urbex/urbex/")
+# repo = Path("/home/runner/work/open-urbex/open-urbex/")
 
 
 # def test_ox_trans_load():
