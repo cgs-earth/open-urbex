@@ -1,0 +1,22 @@
+name: black
+
+on: [push, pull_request]
+
+jobs:
+  black:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.12
+          architecture: x64
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Black
+        uses: psf/black@stable
+        with:
+          options: "--check --diff"
+          jupyter: true
+          version: "25.1.0"
