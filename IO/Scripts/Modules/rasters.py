@@ -9,7 +9,7 @@ from rasterio import errors, features
 from rasterio.transform import Affine, xy
 from rasterio.warp import reproject, Resampling, calculate_default_transform
 from rasterio.crs import CRS
-from rasterio.shutil import delete as rdel
+from rasterio.shutil import delete as rdel  # noqa
 from rasterio.stack import stack
 from shapely.geometry import shape
 from sklearn.neighbors import KernelDensity
@@ -20,7 +20,7 @@ import xarray as xr
 from xrspatial.focal import focal_stats
 from xrspatial.convolution import circle_kernel
 from xrspatial.zonal import stats, regions
-import osgeo_utils.gdal_merge
+import osgeo_utils.gdal_merge  # noqa
 
 
 def run_kde(

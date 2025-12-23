@@ -1,6 +1,6 @@
-from IO.Scripts.Modules.vectors import roads_dwnld_filt
-from IO.Scripts.Modules.terrain import get_terrain_data
-from IO.Scripts.Modules.rasters import vec_2_rast, distance_accumulation
+from IO.Scripts.Modules.vectors import roads_dwnld_filt  # noqa
+from IO.Scripts.Modules.terrain import get_terrain_data  # noqa
+from IO.Scripts.Modules.rasters import vec_2_rast, distance_accumulation  # noqa
 
 import math
 from pathlib import Path
@@ -8,9 +8,9 @@ import geopandas as gpd
 import requests
 from zipfile import ZipFile
 from shapely.geometry import Polygon
-import shutil
-import numpy as np
-import duckdb
+import shutil  # noqa
+import numpy as np  # noqa
+import duckdb  # noqa
 
 
 def dwnld_import(ucid: int, outfp: str | Path) -> gpd.GeoDataFrame:
@@ -106,7 +106,7 @@ def alt_poly(fp: Path | str, id: str, city: str, country: str) -> gpd.GeoDataFra
 
     if len(gdf) > 1:
         gdf = gdf.dissolve("IC_UC_G0").reset_index()
-    return gdf[["IC_UC_G0", "GC_UCN_MAI_2025", "GC_CNT_GAD_2025", "geometry"]]
+    return gdf[["IC_UC_G0", "GC_UCN_MAI_2025", "GC_CNT_GAD_2025", "geometry"]]  # type: ignore
 
 
 def create_extents(shape: gpd.GeoSeries) -> tuple:  # TODO: Write Test!
@@ -209,7 +209,6 @@ def folder_set_up(out_path: str | Path, city_name: str, country_name: str) -> tu
         Path(outfp, f).mkdir(parents=True, exist_ok=True)
         fpdict[f] = outfp / f
     return outfp, fpdict
-
 
 
 def test_set_up():
