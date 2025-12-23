@@ -339,10 +339,10 @@ def test_node_dist_grid():
     assert isinstance(xy, np.ndarray)
 
     assert len(gx) == len(gy) == 5000
-    assert abs(gx.max()) - abs(max(xpts)) < 53
+    assert abs(gx.max()) - abs(max(xpts)) < 0.15
     assert abs(gx.min()) - abs(min(xpts)) < 0.15
     assert abs(gy.max()) - abs(max(ypts)) < 0.15
-    assert abs(gy.min()) - abs(min(ypts)) < 53
+    assert abs(gy.min()) - abs(min(ypts)) < 0.15
     assert len(g[g == 21]) > len(points)
     assert len(points) == len(xy)
 

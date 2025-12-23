@@ -26,8 +26,8 @@ import osgeo_utils.gdal_merge  # noqa
 def run_kde(
     pts: gpd.GeoDataFrame,
     xmin: np.float64,
-    ymin: np.float64,
     xmax: np.float64,
+    ymin: np.float64,
     ymax: np.float64,
     bw: float = 0.005,
 ):
@@ -78,8 +78,8 @@ def export_kde_raster(
     XX: np.ndarray,
     YY: np.ndarray,
     xmin: np.float64,
-    ymin: np.float64,
     xmax: np.float64,
+    ymin: np.float64,
     ymax: np.float64,
     proj: int,
     filename: str | Path,
@@ -138,8 +138,8 @@ def kde_to_city_center(
     city_name: str,
     country_name: str,
     xmin: np.float64,
-    ymin: np.float64,
     xmax: np.float64,
+    ymin: np.float64,
     ymax: np.float64,
     cc_one: bool = True,
 ) -> gpd.GeoDataFrame:
@@ -375,8 +375,8 @@ def coreg_raster(
 def node_dist_grid(
     nodes: gpd.GeoDataFrame,
     xmin: np.float64,
-    ymin: np.float64,
     xmax: np.float64,
+    ymin: np.float64,
     ymax: np.float64,
 ) -> tuple:
     """
@@ -429,8 +429,8 @@ def array_2_tif(
     fdict: dict[str, Path],
     city_name: str,
     xmin: np.float64,
-    ymin: np.float64,
     xmax: np.float64,
+    ymin: np.float64,
     ymax: np.float64,
 ) -> Path:  # TODO: Write Test!
     """
