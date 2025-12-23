@@ -96,7 +96,7 @@ def test_run_kde():
     ymin = bbx[1] - 0.125
     ymax = bbx[3] + 0.125
     # test ideal points
-    a, yct, xct = run_kde(points, xmin, ymin, xmax, ymax)
+    a, yct, xct = run_kde(points, xmin, xmax, ymin, ymax)
     assert (
         isinstance(a, np.ndarray)
         and isinstance(yct, np.ndarray)
@@ -107,7 +107,7 @@ def test_run_kde():
     assert yct[0][0] != xct[0][0]
 
     # test one point
-    a, yct, xct = run_kde(points.iloc[[0]], xmin, ymin, xmax, ymax)
+    a, yct, xct = run_kde(points.iloc[[0]], xmin, xmax, ymin, ymax)
     assert (
         isinstance(a, np.ndarray)
         and isinstance(yct, np.ndarray)
@@ -119,11 +119,11 @@ def test_run_kde():
 
     with pytest.raises(ValueError):
         # test multipoints
-        a, yct, xct = run_kde(multipoints, xmin, ymin, xmax, ymax)
+        a, yct, xct = run_kde(multipoints, xmin, xmax, ymin, ymax)
         # test lines
-        a, yct, xct = run_kde(lines, xmin, ymin, xmax, ymax)
+        a, yct, xct = run_kde(lines, xmin, xmax, ymin, ymax)
         # test polygons
-        a, yct, xct = run_kde(polygons, xmin, ymin, xmax, ymax)
+        a, yct, xct = run_kde(polygons, xmin, xmax, ymin, ymax)
     # bad bounding box
     a, yct, xct = run_kde(points, 1.0, 2.0, 2.0, 1.0)  # type: ignore
     assert (
@@ -146,7 +146,7 @@ def test_kde_to_city_center():
     ymin = bbx[1] - 0.125
     ymax = bbx[3] + 0.125
     # test ideal points
-    kde_out, YY, XX = run_kde(points, xmin, ymin, xmax, ymax)
+    kde_out, YY, XX = run_kde(points, xmin, xmax, ymin, ymax)
     city_name = "Test"
     country_name = "TestTest"
     # test good inputs
@@ -201,7 +201,7 @@ def test_export_kde_raster():
     ymin = bbx[1] - 0.125
     ymax = bbx[3] + 0.125
     # test ideal points
-    kde_out, YY, XX = run_kde(points, xmin, ymin, xmax, ymax)
+    kde_out, YY, XX = run_kde(points, xmin, xmax, ymin, ymax)
     proj = 4326
     filename = otd / "TestKDE.tif"
     # test good fp, crs, bounding box, xct/yct, grid

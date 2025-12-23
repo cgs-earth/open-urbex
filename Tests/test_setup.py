@@ -75,8 +75,8 @@ def test_wgs84_to_utm():
     bigstr = CRS.from_user_input(wkid).to_wkt(pretty=True)
     assert "UTM zone" in bigstr
 
-    # test dif crs change pt loc
-    geo2 = gpd.points_from_xy(df.long, df.lat, crs=3857)
+    # test dif crs change pt loc (switch lat/long)
+    geo2 = gpd.points_from_xy(df.lat, df.long, crs=3857)
     ggg2 = gpd.GeoDataFrame(df, geometry=geo2)
     UTMZone2, wkid2 = wgs84_to_utm(ggg2)  # type: ignore
     assert UTMZone != UTMZone2
