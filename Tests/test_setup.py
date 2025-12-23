@@ -22,7 +22,6 @@ from IO.Scripts.Modules.setup import (  # noqa
     create_extents,  # noqa
     wgs84_to_utm,  # noqa
     folder_set_up,  # noqa
-    is_req_file_check,  # noqa
     test_set_up,  # noqa
 )  # noqa
 
