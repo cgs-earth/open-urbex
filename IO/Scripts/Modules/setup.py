@@ -218,14 +218,14 @@ def test_set_up():
 
     Parameters
     ----------
-    out_path : str or PurePath, parent folder location
 
     Returns
     -------
     outfp : PurePath, analysis parent path
+    fpdict : Dictionary of str: Path
 
     """
-    outfp = Path("IO", "Scripts", "Tests", "Test_Data")
+    outfp = Path("Tests", "Test_Data")
     Path(outfp).mkdir(parents=True, exist_ok=True)
     fpdict = {}
     for f in [
