@@ -106,7 +106,11 @@ def alt_poly(fp: Path | str, id: str, city: str, country: str) -> gpd.GeoDataFra
 
     if len(gdf) > 1:
         gdf = gdf.dissolve("IC_UC_G0").reset_index()
-    return gdf[["IC_UC_G0", "GC_UCN_MAI_2025", "GC_CNT_GAD_2025", "geometry"]]  # type: ignore
+    return gdf[[
+        "IC_UC_G0",
+        "GC_UCN_MAI_2025",
+        "GC_CNT_GAD_2025",
+        "geometry"]]  # type: ignore
 
 
 def create_extents(shape: gpd.GeoSeries) -> tuple:  # TODO: Write Test!
