@@ -9,6 +9,11 @@ from arcgis.gis import GIS
 from arcgis.features import FeatureLayer
 from arcgis.geometry.filters import overlaps
 import duckdb
+import os
+import io
+import py7zr
+import tempfile
+import requests
 
 
 def ox_trans_load(
@@ -434,22 +439,49 @@ def water_dwnld_clean(
         lakes = ovrtr_memry(lkCols, lkDPath, lkQuer, xmin, xmax, ymin, ymax, con)
 
         # esri water
-        ewCols = ["objectid", "name1", "type", "iso_cc"]
-        ewDPath = "https://maps.nccs.nasa.gov/mapping/rest/services/base_layers/esri_world_water_bodies/FeatureServer/0"  # noqa
-        agol = GIS()  # noqa
-        query_extent: dict[str, np.float64 | dict[str, int]] = {
-            "xmin": xmin,
-            "ymin": ymin,
-            "xmax": xmax,
-            "ymax": ymax,
-            "spatialReference": {"wkid": 4326},
-        }
-        water = FeatureLayer(ewDPath).query(
-            where="SHAPE__Area > 0.001",
-            geometry_filter=overlaps(query_extent, sr=4326),  # type: ignore
-            as_df=True,
-        )
-        water = fl_2_gdf(water, cols=ewCols, espg="EPSG:4326")  # type: ignore
+        lpk_url = "https://www.arcgis.com/sharing/rest/content/items/e750071279bf450cbd510454a80f2e63/data"
+        ewCols = ["OBJECTID", "Name1", "TYPE", "ISO_CC", "geometry"]
+        bbox_filter = (xmin, ymin, xmax, ymax)
+    
+    
+        response = requests.get(lpk_url)
+        lpk_bytes = io.BytesIO(response.content)
+    
+        # Extract and process using a temporary directory
+        with tempfile.TemporaryDirectory() as temp_dir:
+        # Unzip the 7z archive
+            with py7zr.SevenZipFile(lpk_bytes, mode='r') as z:
+                z.extractall(path=temp_dir)
+    
+            
+            gdb_path = None
+            for root, dirs, _ in os.walk(temp_dir):
+                for d in dirs:
+                    # Case-insensitive check for .gdb folders
+                    if d.lower().endswith(".gdb"):
+                        gdb_path = os.path.join(root, d)
+                        print(f"Found GDB at: {gdb_path}")
+                        break
+                if gdb_path: break
+    
+            if not gdb_path:
+                raise FileNotFoundError("ESRI world water could not be fetched.")
+    
+            # Read the GDB into a GeoDataFrame
+            water = gpd.read_file(
+                gdb_path,
+                columns=ewCols,
+                bbox=bbox_filter,
+                engine="pyogrio",
+                on_invalid="ignore"
+            )
+    
+        if not water.empty:
+            water['geometry'] = water.geometry.make_valid()
+    
+        water = water[water.geometry.area > 0.001]
+    
+        water = water.to_crs("EPSG:4326")
 
         # buffer rivers
         rivers = rivers.to_crs(wkid)
