@@ -15,7 +15,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@master
     - name: Install flake8
-      run: pip install flake8 flake8-nb
+      run: pip install flake8==7.3.0
     - name: run flake8 ⚙️
       run: |
         find . -type f -name "*.py" | xargs flake8 --max-line-length=88 --ignore=E203,E701,W503
