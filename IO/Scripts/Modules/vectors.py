@@ -5,9 +5,7 @@ import pandas as pd
 import geopandas as gpd
 import osmnx as ox
 import shapely
-from arcgis.gis import GIS
 from arcgis.features import FeatureLayer
-from arcgis.geometry.filters import overlaps
 import duckdb
 import os
 import io
@@ -439,21 +437,22 @@ def water_dwnld_clean(
         lakes = ovrtr_memry(lkCols, lkDPath, lkQuer, xmin, xmax, ymin, ymax, con)
 
         # esri water
-        lpk_url = "https://www.arcgis.com/sharing/rest/content/items/e750071279bf450cbd510454a80f2e63/data"
+        lpk_url = (
+            "https://www.arcgis.com/sharing/rest/content/items/"
+            + "e750071279bf450cbd510454a80f2e63/data"
+        )
         ewCols = ["OBJECTID", "Name1", "TYPE", "ISO_CC", "geometry"]
         bbox_filter = (xmin, ymin, xmax, ymax)
-    
-    
+
         response = requests.get(lpk_url)
         lpk_bytes = io.BytesIO(response.content)
-    
+
         # Extract and process using a temporary directory
         with tempfile.TemporaryDirectory() as temp_dir:
-        # Unzip the 7z archive
-            with py7zr.SevenZipFile(lpk_bytes, mode='r') as z:
+            # Unzip the 7z archive
+            with py7zr.SevenZipFile(lpk_bytes, mode="r") as z:
                 z.extractall(path=temp_dir)
-    
-            
+
             gdb_path = None
             for root, dirs, _ in os.walk(temp_dir):
                 for d in dirs:
@@ -462,25 +461,26 @@ def water_dwnld_clean(
                         gdb_path = os.path.join(root, d)
                         print(f"Found GDB at: {gdb_path}")
                         break
-                if gdb_path: break
-    
+                if gdb_path:
+                    break
+
             if not gdb_path:
                 raise FileNotFoundError("ESRI world water could not be fetched.")
-    
+
             # Read the GDB into a GeoDataFrame
             water = gpd.read_file(
                 gdb_path,
                 columns=ewCols,
-                bbox=bbox_filter,
+                bbox=bbox_filter,  # type: ignore
                 engine="pyogrio",
-                on_invalid="ignore"
+                on_invalid="ignore",
             )
-    
+
         if not water.empty:
-            water['geometry'] = water.geometry.make_valid()
-    
+            water["geometry"] = water.geometry.make_valid()
+
         water = water[water.geometry.area > 0.001]
-    
+
         water = water.to_crs("EPSG:4326")
 
         # buffer rivers
