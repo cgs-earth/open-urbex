@@ -11,6 +11,8 @@ from shapely.geometry import Polygon
 import shutil  # noqa
 import numpy as np  # noqa
 import duckdb  # noqa
+import json
+from urllib.request import urlopen
 
 
 def dwnld_import(ucid: int, outfp: str | Path) -> gpd.GeoDataFrame:
@@ -242,3 +244,22 @@ def test_set_up():
         fpdict[f] = outfp / f / "out"
 
     return outfp, fpdict
+
+
+def latest_overture() -> str:
+    """
+    Pulls from Overture Maps STAC JSON that lists available releases
+    and grabs the latest release listed.
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+        : str
+        string representing release - like "2026-03-18.0"
+    """
+
+    return json.loads(urlopen("https://stac.overturemaps.org/catalog.json").read())[
+        "latest"
+    ]
